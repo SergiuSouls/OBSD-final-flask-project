@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Адмін-панель - Магазин ПК</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>⚙️ Адмін-панель</h1>
+
+        <nav>
+            <a href="/">Головна</a>
+            <a href="/shop">Товари</a>
+            <a href="/admin">Адмін-панель</a>
+        </nav>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="message {{ category }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Сповіщення про низькі залишки -->
+        {% if low_stock %}
+        <div style="background: #fed7d7; padding: 20px; border-radius: 10px; margin: 20px 0;">
+            <h2 style="color: #742a2a; margin-bottom: 15px;">⚠️ Сповіщення про низькі залишки</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Товар</th>
+                        <th>Залишок</th>
+                        <th>Дата сповіщення</th>
+                        <th>Дія</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in low_stock %}
+                    <tr>
+                        <td>{{ alert.product_name }}</td>
+                        <td style="color: #e53e3e; font-weight: bold;">{{ alert.current_quantity }} шт</td>
+                        <td>{{ alert.alert_date.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('restock', product_id=alert.product_id) }}" style="display: flex; gap: 10px;">
+                                <input type="number" name="quantity" min="1" placeholder="Кількість" style="width: 100px;" required>
+                                <button type="submit" class="btn" style="padding: 8px 15px;">Поповнити</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Топ товарів -->
+        <div style="margin: 30px 0;">
+            <h2>🏆 Топ-5 товарів за продажами</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Місце</th>
+                        <th>Назва товару</th>
+                        <th>Продано разів</th>
+                        <th>Виручка</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in top_products %}
+                    <tr>
+                        <td>
+                            {% if product.rank == 1 %}🥇
+                            {% elif product.rank == 2 %}🥈
+                            {% elif product.rank == 3 %}🥉
+                            {% else %}{{ product.rank }}
+                            {% endif %}
+                        </td>
+                        <td>{{ product.product_name }}</td>
+                        <td>{{ product.times_sold }}</td>
+                        <td style="color: #48bb78; font-weight: bold;">${{ product.total_revenue }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Статистика продажів за 30 днів -->
+        <div style="margin: 30px 0;">
+            <h2>📊 Статистика продажів (30 днів)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Товар</th>
+                        <th>Продано</th>
+                        <th>Виручка</th>
+                        <th>Останній продаж</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in sales_stats %}
+                    <tr>
+                        <td>{{ stat.product_name }}</td>
+                        <td>{{ stat.total_sold }} шт</td>
+                        <td style="color: #48bb78; font-weight: bold;">${{ stat.total_revenue }}</td>
+                        <td>{{ stat.last_sale_date.strftime('%d.%m.%Y %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Історія змін цін -->
+        <div style="margin: 30px 0;">
+            <h2>💰 Історія змін цін (останні 10)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Товар</th>
+                        <th>Стара ціна</th>
+                        <th>Нова ціна</th>
+                        <th>Зміна</th>
+                        <th>Дата</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for price in price_history %}
+                    <tr>
+                        <td>{{ price.name }}</td>
+                        <td>${{ price.old_price }}</td>
+                        <td>${{ price.new_price }}</td>
+                        <td>
+                            {% if price.new_price < price.old_price %}
+                                <span style="color: #48bb78;">↓ ${{ (price.old_price - price.new_price)|round(2) }}</span>
+                            {% else %}
+                                <span style="color: #e53e3e;">↑ ${{ (price.new_price - price.old_price)|round(2) }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ price.changed_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Управління товарами -->
+        <div style="margin: 30px 0;">
+            <a href="/admin/sales-log" class="btn">Переглянути повний лог продажів</a>
+        </div>
+    </div>
+</body>
+</html>
