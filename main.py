@@ -107,5 +107,105 @@ def browse():
     rowlist = cursor.fetchall()
     return render_template('browse.html', entries=rowlist)
 
+
+@app.route('/admin')
+def admin_panel():
+    """Адмін-панель з статистикою"""
+    conn = get_db()
+    cur = conn.cursor()
+
+    # Статистика продажів
+    cur.execute("SELECT * FROM get_sales_stats(30)")
+    sales_stats = cur.fetchall()
+
+    # Топ товарів
+    cur.execute("SELECT * FROM get_top_products(5)")
+    top_products = cur.fetchall()
+
+    # Сповіщення про низькі залишки
+    cur.execute("SELECT * FROM low_stock_alerts WHERE is_resolved = FALSE ORDER BY alert_date DESC")
+    low_stock = cur.fetchall()
+
+    # Історія цін (останні 10)
+    cur.execute("""
+        SELECT ph.*, p.name 
+        FROM price_history ph
+        JOIN products p ON ph.product_id = p.id
+        ORDER BY ph.changed_at DESC 
+        LIMIT 10
+    """)
+    price_history = cur.fetchall()
+
+    return render_template('admin.html',
+                           sales_stats=sales_stats,
+                           top_products=top_products,
+                           low_stock=low_stock,
+                           price_history=price_history)
+
+
+@app.route('/admin/restock/<int:product_id>', methods=['POST'])
+def restock(product_id):
+    """Поповнення товару"""
+    quantity = request.form.get('quantity', type=int)
+
+    if not quantity or quantity <= 0:
+        flash("Введіть коректну кількість!", "error")
+        return redirect(url_for('admin_panel'))
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("SELECT restock_product(%s, %s)", (product_id, quantity))
+    result = cur.fetchone()
+    conn.commit()
+
+    flash(result[0], "success")
+    return redirect(url_for('admin_panel'))
+
+
+@app.route('/admin/discount/<int:product_id>', methods=['POST'])
+def apply_discount_route(product_id):
+    """Застосування знижки"""
+    discount = request.form.get('discount', type=float)
+
+    if not discount or discount <= 0 or discount > 100:
+        flash("Знижка має бути від 1% до 100%!", "error")
+        return redirect(url_for('admin_panel'))
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("SELECT apply_discount(%s, %s)", (product_id, discount))
+    result = cur.fetchone()
+    conn.commit()
+
+    flash(result[0], "success")
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/sales-log')
+def sales_log():
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT * FROM sales_log 
+        ORDER BY sale_date DESC 
+        LIMIT 100
+    """)
+    logs = cur.fetchall()
+
+    return render_template('sales_log.html', logs=logs)
+@app.cli.command('triggers')
+def triggers_db():
+    conn = get_db()
+    cur = conn.cursor()
+
+    with current_app.open_resource("triggers_and_procedures.sql") as file:
+        sql = file.read().decode("utf-8")
+        cur.execute(sql)
+
+    conn.commit()
+    print("Triggered database")
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
