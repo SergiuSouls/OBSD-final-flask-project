@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Магазин ПК Компонентів</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>🖥️ Магазин ПК Компонентів</h1>
+
+        <nav>
+            <a href="/">Головна</a>
+            <a href="/shop">Товари</a>
+        </nav>
+
+        <h2>Купуйте найкращі комплектуючі!</h2>
+
+        <div class="products-grid">
+            {% for item in items %}
+            <div class="product-card">
+                <img src="{{ url_for('static', filename='img/' + item.image) }}"
+                     alt="{{ item.name }}"
+                     onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
+
+                <span class="product-category">{{ item.category }}</span>
+
+                <h3>{{ item.name }}</h3>
+
+                <div class="product-price">${{ item.price }}</div>
+
+                <div class="product-stock">
+                    {% if item.quantity > 0 %}
+                        ✅ В наявності: {{ item.quantity }} шт
+                    {% else %}
+                        ❌ Немає в наявності
+                    {% endif %}
+                </div>
+
+                {% if item.quantity > 0 %}
+                <form method="POST" action="{{ url_for('buy', product_id=item.id) }}" style="margin: 0;">
+                    <button type="submit" class="btn btn-add">
+                        🛒 Купити
+                    </button>
+                </form>
+                {% else %}
+                <button class="btn btn-add" disabled style="opacity: 0.5; cursor: not-allowed;">
+                    Немає в наявності
+                </button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="message {{ category }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+</body>
+</html>
