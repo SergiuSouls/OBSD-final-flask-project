@@ -155,11 +155,20 @@ def restock(product_id):
     conn = get_db()
     cur = conn.cursor()
 
-    cur.execute("SELECT restock_product(%s, %s)", (product_id, quantity))
-    result = cur.fetchone()
-    conn.commit()
+    try:
+        cur.execute("SELECT restock_product(%s, %s)", (product_id, quantity))
+        result = cur.fetchone()
+        conn.commit()
 
-    flash(result[0], "success")
+        # Правильний виклик flash - беремо результат з dict
+        if result:
+            flash(str(result['restock_product']), "success")
+        else:
+            flash("Товар успішно поповнено!", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Помилка: {str(e)}", "error")
+
     return redirect(url_for('admin_panel'))
 
 
@@ -167,19 +176,28 @@ def restock(product_id):
 def apply_discount_route(product_id):
     """Застосування знижки"""
     discount = request.form.get('discount', type=float)
-
+    
     if not discount or discount <= 0 or discount > 100:
         flash("Знижка має бути від 1% до 100%!", "error")
         return redirect(url_for('admin_panel'))
-
+    
     conn = get_db()
     cur = conn.cursor()
-
-    cur.execute("SELECT apply_discount(%s, %s)", (product_id, discount))
-    result = cur.fetchone()
-    conn.commit()
-
-    flash(result[0], "success")
+    
+    try:
+        cur.execute("SELECT apply_discount(%s, %s)", (product_id, discount))
+        result = cur.fetchone()
+        conn.commit()
+        
+        # Правильний виклик flash - беремо результат з dict
+        if result:
+            flash(str(result['apply_discount']), "success")
+        else:
+            flash("Знижку застосовано!", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Помилка: {str(e)}", "error")
+    
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/sales-log')
@@ -209,3 +227,4 @@ def triggers_db():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
+
