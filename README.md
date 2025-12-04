@@ -33,6 +33,9 @@
 ### Мобільна версія
 ![Мобільна версія](./screenshots/mobile.png)
 
+### ERD 
+![Diagramm](./screenshots/tables.png)
+
 ## 🚀 Технології
 
 - **Backend**: Flask (Python)
